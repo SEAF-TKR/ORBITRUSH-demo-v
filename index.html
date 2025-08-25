@@ -33,6 +33,13 @@
   .subtle { opacity: .85; font-size: 12px; }
   .hidden { display: none; }
 </style>
+<style>
+  /* スマホでボタンを確実に表示するための強制クラス */
+  .btns.show { display: flex !important; }
+
+  /* プレイ中の誤スクロールやダブルタップズーム抑止 */
+  #game { touch-action: none; }
+</style>
 </head>
 <body>
   <!-- DEMO: badge & discount buy link -->
@@ -51,7 +58,7 @@
     <div class="badge">FEVER <span id="fever">-</span></div>
     <div class="badge">SHIELD <span id="shield">1</span></div>
     <div class="badge">PHASE <span id="phase">1</span></div>
-    <div class="badge">TIME X.0</span></div>
+    <div class="badge">TIME <span id="time">X.0</span></div>
     <div class="badge">BPM <span id="bpm">126</span></div>
     <div class="badge">THEME <span id="theme">Neon</span></div>
   </div>
@@ -229,6 +236,58 @@
   document.getElementById('btnPause').onclick = ()=> togglePause();
   const btnPhase=document.getElementById('btnPhase'); if(btnPhase) btnPhase.onclick=()=>{ activatePhase(); if(!started) startGame(); };
   const btnTheme=document.getElementById('btnTheme'); if(btnTheme) btnTheme.onclick=()=>{ themeIndex=(themeIndex+1)%THEMES.length; applyTheme(themeIndex); toast('THEME: '+THEMES[themeIndex].name); if(!started) startGame(); };
+/* === スマホUIの確実な表示 === */
+(function(){
+  const btns = document.querySelector('.btns');
+  if (btns) {
+    const isCoarse = matchMedia('(pointer: coarse)').matches;
+    const isNarrow = window.innerWidth <= 900;
+    if (isCoarse || isNarrow) btns.classList.add('show');
+  }
+})();
+
+/* === キャンバスをタップで操作：左/中央/右 = レーン選択、ダブルタップ = PHASE === */
+(function(){
+  const canvasEl = document.getElementById('game');
+  let lastTap = 0;
+
+  function goLane(target){
+    target = Math.max(0, Math.min(2, target));
+    while (lane < target) changeLane(1);
+    while (lane > target) changeLane(-1);
+    if (!started) startGame();
+  }
+
+  canvasEl.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const rect = canvasEl.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const third = rect.width / 3;
+
+    const now = performance.now();
+    if (now - lastTap < 250) {
+      // ダブルタップでPHASE発動
+      activatePhase();
+      if (!started) startGame();
+    } else {
+      // タップ位置でレーン指定（左=0, 中央=1, 右=2）
+      const target = x < third ? 0 : (x > 2*third ? 2 : 1);
+      goLane(target);
+    }
+    lastTap = now;
+  }, { passive: false });
+})();
+
+/* === iOS対策：初回操作でAudioContextをresume === */
+(function(){
+  ['pointerdown','keydown','click','touchstart'].forEach(ev => {
+    window.addEventListener(ev, () => {
+      if (SOUNDS.ac && SOUNDS.ac.state === 'suspended') {
+        SOUNDS.ac.resume().catch(()=>{});
+      }
+    }, { once: true, passive: true });
+  });
+})();
 
   /* ========================== 譜面 ========================== */
   function buildChart(){
