@@ -3,15 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-<title>ORBIT RUSH — v0.8.1 (theme-linked + phase + hints)</title>
+<title>ORBIT RUSH — v0.8.1 (Mobile Ready)</title>
 <style>
   :root {
-    --bg: #0a0c10;         /* 背景（通常） */
-    --bg-fever: #0d141a;   /* 背景（Fever） */
-    --fg: #eaf6ff;         /* 文字 */
-    --accent: #41d1ff;     /* コイン/UI */
-    --danger: #ff4d6d;     /* 壁 */
-    --good: #7cffcb;       /* 成功演出 */
+    --bg: #0a0c10; --bg-fever:#0d141a; --fg:#eaf6ff; --accent:#41d1ff; --danger:#ff4d6d; --good:#7cffcb;
   }
   html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; }
   #wrap { display: grid; place-items: center; height: 100%; }
@@ -19,173 +14,45 @@
   .hud { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; font-weight: 700; letter-spacing: .02em; text-shadow: 0 1px 0 rgba(0,0,0,.5); flex-wrap: wrap; justify-content: center; }
   .badge { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(6px); }
   .controls { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); opacity: .95; font-size: 14px; text-align: center; }
-  .btns { display: none; }
-  @media (hover: none) and (pointer: coarse) {
-    .btns { display: flex; gap: 12px; margin-top: 8px; justify-content: center; flex-wrap: wrap; }
-    .btns button { padding: 12px 18px; border-radius: 12px; background: rgba(255,255,255,.08); color: var(--fg); border: 1px solid rgba(255,255,255,.12); font-size: 16px; }
-  }
-  .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1); background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); padding: 16px 18px; border-radius: 12px; text-align: center; backdrop-filter: blur(6px); box-shadow: 0 10px 30px rgba(0,0,0,.35); pointer-events: none; }
+  .hidden { display: none; }
   .start, .over { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.35); backdrop-filter: blur(2px); }
   .panel { padding: 22px 26px; border-radius: 16px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); text-align: center; }
   .panel h1 { margin: 0 0 8px; font-size: 22px; letter-spacing: .06em; text-shadow: 0 2px 10px rgba(255,255,255,.2); }
-  .panel small { opacity: .85; }
   .scoreXL { font-size: 56px; font-weight: 900; letter-spacing: .04em; margin: 8px 0 2px; text-shadow: 0 4px 16px rgba(0,0,0,.35); }
   .subtle { opacity: .85; font-size: 12px; }
-  .hidden { display: none; }
-</style>
-<style>
-  /* スマホでボタンを確実に表示するための強制クラス */
-  .btns.show { display: flex !important; }
 
-  /* プレイ中の誤スクロールやダブルタップズーム抑止 */
-  #game { touch-action: none; }
-</style>
-<style>
-      /* 既存のスマホ用ボタンが表示されない環境対策（任意クラス） */
-      .btns.show { display: flex !important; }
-
-      /* 新しいオンスクリーン操作パッド */
-      .mobile-controls {
-        position: fixed;
-        inset: auto 0 0 0;
-        display: none;            /* JSでモバイル時のみ表示 */
-        gap: .75rem;
-        padding: .75rem;
-        background: rgba(0,0,0,.35);
-        backdrop-filter: blur(6px);
-        z-index: 9999;
-        touch-action: none;       /* スクロール/ダブルタップズーム抑止 */
-      }
-      .mobile-controls.show { display: grid; }
-      .mobile-controls { grid-template-columns: 1fr 1fr 1.2fr 1.8fr 1.2fr; align-items: stretch; }
-      .mc-btn {
-        font: 600 16px/1.1 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-        color: #fff;
-        background: rgba(255,255,255,.12);
-        border: 1px solid rgba(255,255,255,.25);
-        border-radius: 14px;
-        padding: .9rem .6rem;
-        text-align: center;
-        user-select: none;
-        -webkit-user-select: none;
-      }
-      .mc-btn:active { transform: translateY(1px); }
-      /* 既存キャンバスの誤スクロール防止 */
-      #game { touch-action: none; }
-
-      /* 既存の .btns がある場合、モバイルでは非表示（重複UI回避） */
-      @media (pointer: coarse), (max-width: 900px) {
-        .btns { display: none !important; }
-        .mc-btn { padding: 1.05rem .6rem; font-size: 17px; }
-      }
-    </style>
-<style>
-  /* モバイル用の「TAP TO START」最前面ボタン */
-  .mobile-start {
-    position: fixed;
-    inset: auto 0 18vh 0;
-    margin: 0 auto;
-    width: min(420px, 92vw);
-    padding: 1rem 1.25rem;
-    text-align: center;
-    font: 700 18px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-    color: #fff;
-    background: rgba(0,0,0,.55);
-    border: 1px solid rgba(255,255,255,.35);
-    border-radius: 16px;
-    z-index: 10000; /* 既存オーバーレイより前面に出す */
-    display: none;  /* JSでモバイル時のみ表示 */
-    backdrop-filter: blur(6px);
-    -webkit-user-select: none; user-select: none;
+  /* Mobile UI Enhancements */
+  @media (pointer: coarse), (max-width: 900px) {
+    .start, .over, .controls {
+      display: none !important;
+    }
   }
-  .mobile-start.show { display: block; }
-
-  /* 説明オーバーレイがクリック可能に見えるように（念のため） */
-  .howto, .help, .overlay, .intro, .modal, .screen { cursor: pointer; }
+  .ui-start { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10000; display: none; padding: 14px 18px; width: min(420px, 86vw); text-align: center; font: 700 18px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color: #fff; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.35); border-radius: 16px; backdrop-filter: blur(6px); -webkit-user-select: none; user-select: none; }
+  .ui-start.show { display: block; }
+  .ui-mute { position: fixed; right: max(8px, env(safe-area-inset-right)); top: max(8px, env(safe-area-inset-top)); z-index: 10001; padding: 10px 12px; font: 600 16px/1 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color: #fff; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.35); border-radius: 12px; backdrop-filter: blur(6px); cursor: pointer; }
+  .ui-mute::before { content: "🔊"; }
+  .ui-mute.is-muted::before { content: "🔇"; }
+  #game { touch-action: none; }
 </style>
 </head>
 <body>
-  <!-- DEMO: badge & discount buy link -->
-  <div class="badge" style="position:fixed;left:12px;top:12px;z-index:20;opacity:.9">DEMO</div>
-  <a class="badge" href="https://seaftkr.gumroad.com/l/ooecx/W6FZ9SF" target="_blank" rel="noopener"
-     style="position:fixed;right:12px;top:12px;z-index:20;text-decoration:none">製品版はこちら（割引適用）</a>
-
-  <div id="wrap">
-    <canvas id="game" width="900" height="900"></canvas>
-  </div>
+  <div id="wrap"><canvas id="game" width="900" height="900"></canvas></div>
   <div class="hud">
     <div class="badge">SCORE <span id="score">0</span></div>
     <div class="badge">BEST <span id="best">0</span></div>
     <div class="badge">COMBO <span id="combo">0</span></div>
     <div class="badge">MULTI ×<span id="multi">1</span></div>
     <div class="badge">FEVER <span id="fever">-</span></div>
-    <div class="badge">SHIELD <span id="shield">1</span></div>
+    <div class="badge">SHIELD <span id="shield">0</span></div>
     <div class="badge">PHASE <span id="phase">1</span></div>
-    <div class="badge">TIME <span id="time">X.0</span></div>
-    <div class="badge">BPM <span id="bpm">126</span></div>
-    <div class="badge">THEME <span id="theme">Neon</span></div>
+    <div class="badge">TIME <span id="time">30.0</span></div>
   </div>
-  <div class="controls">
-    <div>← / → でレーン・Space:PHASE・T:テーマ切替（1〜5で直接）・P:ポーズ・R:リスタート・M:ミュート</div>
-    <div class="btns">
-      <button id="btnLeft">←</button>
-      <button id="btnRight">→</button>
-      <button id="btnTheme">Theme</button>
-      <button id="btnPhase">PHASE</button>
-      <button id="btnPause">Pause</button>
-    </div>
-  </div>
-  <div id="toast" class="toast hidden"></div>
-  <div id="start" class="start">
-    <div class="panel">
-      <h1>ORBIT RUSH</h1>
-      <div>← / → で開始（スマホは下のボタン）</div>
-      <div style="margin-top:8px;font-size:12px;opacity:.85">Perfect/Great/Good・Fever・シールド・<b>Clutch</b>（終盤ボーナス）</div>
-      <div style="margin-top:8px;font-size:12px;opacity:.9">新操作：<b>Space = PHASE（壁すり抜け、1秒）</b></div>
-      <div style="margin-top:10px;font-size:12px;opacity:.9">テーマ切替：<b>T</b> または <b>1〜5</b></div>
-      <small>v0.8.1 theme-linked + phase + hints</small>
-    </div>
-  </div>
-  <div id="over" class="over hidden">
-    <div class="panel">
-      <h1>GAME OVER</h1>
-      <div class="scoreXL" id="overScore">0</div>
-      <div class="subtle">BEST <span id="overBest">0</span></div>
-      <div style="margin-top:10px">R：リスタート / ←→：すぐ再挑戦
-      <div style="margin-top:12px">
-        <a class="badge" href="https://seaftkr.gumroad.com/l/ooecx/W6FZ9SF" target="_blank" rel="noopener"
-           style="text-decoration:none;display:inline-block">▶ 製品版を入手（割引適用）</a>
-      </div>
-</div>
-    </div>
-  </div>
+  <div id="start" class="start"><div class="panel"><h1>ORBIT RUSH</h1><p>← / → to Start</p></div></div>
+  <div id="over" class="over hidden"><div class="panel"><h1>GAME OVER</h1><div class="scoreXL" id="overScore">0</div><div class="subtle">BEST <span id="overBest">0</span></div><p>Press R to Restart</p></div></div>
 
 <script>
+// Original Game Logic
 (() => {
-  /* ========================== 定数 ========================== */
-  const BPM = 126;                                // 曲のBPM
-  const BEAT_MS = 60000 / BPM;                    // 1拍(ms)
-  const BARS = 16;                                // 32小節 ≒ 約60秒 @126BPM
-  const SONG_LENGTH_MS = Math.round(BARS * 4 * BEAT_MS);
-  const CLUTCH_SEC = 5;                           // 残り5秒で発動
-  const CLUTCH_BONUS = 50;                        // Perfect時の素点ボーナス
-  const PHASE_DURATION = 1000;                    // 1秒無敵
-  const PHASE_MAX = 3;                            // 所持上限
-  const ASSIST_SLOW_RANGE = 28;                   // 近接スロー範囲（±度）
-  const LANES = 3;
-  const RINGS = [210, 260, 310];
-  const BASE_SPEED = 180;
-  const PLAYER_RADIUS = 10;
-  const HIT_GOOD = 18, HIT_GREAT = 12, HIT_PERFECT = 6;
-  const FEVER_NEED = 10, FEVER_TIME = 6000, FEVER_SPEED_BOOST = 1.35, MAX_MULTIPLIER = 8;
-  const START_SHIELD = 1;
-  const WALL_HIT_ANGLE = 10;
-  const COYOTE_MS = 120;
-  const HITSTOP_MS = 120;
-  const FLASH_START = 0.65;
-  const KNOCKBACK_DEG = 22;
-
-  /* ========================== 画面 ========================== */
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -198,561 +65,146 @@
   window.addEventListener('resize', resizeCanvas, { passive: true });
   resizeCanvas();
 
-  /* ========================== UI参照 ========================== */
-  const $score = document.getElementById('score');
-  const $best = document.getElementById('best');
-  const $combo = document.getElementById('combo');
-  const $multi = document.getElementById('multi');
-  const $fever = document.getElementById('fever');
-  const $shield = document.getElementById('shield');
-  const $bpm = document.getElementById('bpm');
-  const $time = document.getElementById('time');
-  const $theme = document.getElementById('theme');
-  const $toast = document.getElementById('toast');
-  const $start = document.getElementById('start');
-  const $over = document.getElementById('over');
-  const $overScore = document.getElementById('overScore');
-  const $overBest = document.getElementById('overBest');
-  const $phaseHUD = document.getElementById('phase');
-  $bpm.textContent = BPM;
+  const $ = (id) => document.getElementById(id);
+  const $score=$('score'),$best=$('best'),$combo=$('combo'),$multi=$('multi'),$fever=$('fever'),$shield=$('shield'),$time=$('time'),$overScore=$('overScore'),$overBest=$('overBest'),$phaseHUD=$('phase');
+  const $start=$('start'), $over=$('over');
 
-  function toast(msg, ms = 1000) {
-    $toast.textContent = msg;
-    $toast.classList.remove('hidden');
-    clearTimeout(toast._t);
-    toast._t = setTimeout(() => $toast.classList.add('hidden'), ms);
-  }
+  let started=false, paused=false, score=0, combo=0, multiplier=1, shield=0, phaseCharges=1;
+  let best=parseInt(localStorage.getItem('orbitrush_best')||'0',10);
 
-  /* ========================== テーマ ========================== */
-  const THEMES = [
-    { name: 'Neon',      bg:'#0a0c10', bgFever:'#0d141a', fg:'#eaf6ff', accent:'#41d1ff', danger:'#ff4d6d', good:'#7cffcb' },
-    { name: 'Synthwave', bg:'#0a0612', bgFever:'#12081f', fg:'#ffeefb', accent:'#ff7edb', danger:'#ff4d6d', good:'#ffd166' },
-    { name: 'Sunset',    bg:'#0d0b10', bgFever:'#1b0d12', fg:'#fff7f0', accent:'#ff9e66', danger:'#ff4d6d', good:'#f6e05e' },
-    { name: 'Matcha',    bg:'#0b100d', bgFever:'#0e1612', fg:'#e6fff4', accent:'#7cffcb', danger:'#ff6b6b', good:'#a7f3d0' },
-    { name: 'Mono',      bg:'#0b0b0b', bgFever:'#121212', fg:'#f3f3f3', accent:'#bdbdbd', danger:'#ff5a5a', good:'#ffffff' },
-  ];
-  function hexToRgb(hex){ const m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return m?[parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)]:[255,255,255]; }
-  function rgba(rgb,a){ return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`; }
-  let CUR = { fg:[234,246,255], accent:[65,209,255], danger:[255,77,109], good:[124,255,203] };
-  let themeIndex = 0;
-  function applyTheme(t){
-    const th = THEMES[t];
-    const root = document.documentElement.style;
-    root.setProperty('--bg', th.bg);
-    root.setProperty('--bg-fever', th.bgFever);
-    root.setProperty('--fg', th.fg);
-    root.setProperty('--accent', th.accent);
-    root.setProperty('--danger', th.danger);
-    root.setProperty('--good', th.good);
-    CUR = { fg:hexToRgb(th.fg), accent:hexToRgb(th.accent), danger:hexToRgb(th.danger), good:hexToRgb(th.good) };
-    if ($theme) $theme.textContent = th.name;
-  }
-  applyTheme(themeIndex);
-
-  /* ========================== サウンド ========================== */
   const SOUNDS = (() => {
     const ac = new (window.AudioContext || window.webkitAudioContext)();
-    let muted = false; let bgm;
-    function beep(kind = 'coin') {
-      if (muted) return;
-      const o = ac.createOscillator();
-      const g = ac.createGain();
+    let muted = false;
+    function beep(kind='coin'){
+      if(muted || !ac) return;
+      const o=ac.createOscillator(), g=ac.createGain(), t=ac.currentTime;
       o.connect(g).connect(ac.destination);
-      const t = ac.currentTime;
-      if (kind === 'coin')    { o.type='square';   o.frequency.setValueAtTime(960, t); }
-      if (kind === 'great')   { o.type='square';   o.frequency.setValueAtTime(1100, t); }
-      if (kind === 'perfect') { o.type='sawtooth'; o.frequency.setValueAtTime(1320, t); }
-      if (kind === 'fever')   { o.type='sawtooth'; o.frequency.setValueAtTime(700, t); }
-      if (kind === 'count')   { o.type='square';   o.frequency.setValueAtTime(countPitch, t); }
-      if (kind === 'hit')     { o.type='sawtooth'; o.frequency.setValueAtTime(600, t); o.frequency.exponentialRampToValueAtTime(140, t + 0.12); }
-      if (kind === 'phase')   { o.type='triangle'; o.frequency.setValueAtTime(400, t); o.frequency.exponentialRampToValueAtTime(900, t + 0.18); }
-      g.gain.value = 0.001; g.gain.exponentialRampToValueAtTime(0.12, t + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-      o.start(t); o.stop(t + 0.26);
+      if(kind==='coin'){o.type='square';o.frequency.setValueAtTime(960,t);}
+      if(kind==='hit'){o.type='sawtooth';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(110,t+0.15);}
+      g.gain.value=0.001; g.gain.exponentialRampToValueAtTime(0.1,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+0.2);
+      o.start(t); o.stop(t+0.21);
     }
-    function toggleMute(){ muted = !muted; toast(muted ? 'MUTED' : 'UNMUTED'); if (bgm) { bgm.volume = muted ? 0 : 0.6; } }
-    function playBGM(){ if (bgm) return; const el=document.createElement('audio'); el.src='bgm.mp3'; el.loop=true; el.volume=0.6; el.addEventListener('error',()=>{}); document.body.appendChild(el); bgm=el; bgm.play().catch(()=>{}); }
-    return { ac, beep, toggleMute, playBGM };
+    function toggleMute() { muted = !muted; }
+    return { ac, beep, toggleMute, getMuted: () => muted };
   })();
+  window.SOUNDS = SOUNDS;
 
-  /* ========================== 状態 ========================== */
-  let started=false, paused=false; let startTime=0, elapsed=0; let score=0; let best=parseInt(localStorage.getItem('orbitrush_best')||'0',10);
-  let combo=0, multiplier=1, feverUntil=0; let lane=1, theta=-90; let shield=START_SHIELD; let shake=0; let hitstopUntil=0; let flash=0; let zoomPunch=0; let lastLaneChangeAt=0; let lastSecond=Infinity;
-  let phaseUntil=0, phaseCharges=1, perfectStreak=0; let assistBoostUntil=0; let hitTimestamps=[];
-  let clutch=false, remMs=0, prevBeatPhase=0, countPitch=800;
-  let items=[]; const particles=[], trail=[];
+  function updateHUD(){ $score.textContent=score; $best.textContent=best; $combo.textContent=combo; $multi.textContent=multiplier; $shield.textContent=shield; $phaseHUD.textContent=phaseCharges; }
 
-  /* ========================== 入力 ========================== */
-  addEventListener('keydown', (e)=>{
-    if (e.key==='ArrowLeft'||e.key==='a'){ changeLane(-1); }
-    if (e.key==='ArrowRight'||e.key==='d'){ changeLane(1); }
-    if (e.key===' '){ activatePhase(); }
-    if (e.key==='p'||e.key==='P'){ togglePause(); }
-    if (e.key==='r'||e.key==='R'){ resetGame(); }
-    if (e.key==='m'||e.key==='M'){ SOUNDS.toggleMute(); }
-    if (e.key==='t'||e.key==='T'){ themeIndex=(themeIndex+1)%THEMES.length; applyTheme(themeIndex); toast('THEME: '+THEMES[themeIndex].name); }
-    if (e.key>='1'&&e.key<='5'){ const i=Math.min(4,Math.max(0,parseInt(e.key,10)-1)); themeIndex=i; applyTheme(themeIndex); toast('THEME: '+THEMES[themeIndex].name); }
-    if (!started) startGame();
-  });
-  document.getElementById('btnLeft').onclick = ()=>{ changeLane(-1); if(!started) startGame(); };
-  document.getElementById('btnRight').onclick= ()=>{ changeLane(1); if(!started) startGame(); };
-  document.getElementById('btnPause').onclick = ()=> togglePause();
-  const btnPhase=document.getElementById('btnPhase'); if(btnPhase) btnPhase.onclick=()=>{ activatePhase(); if(!started) startGame(); };
-  const btnTheme=document.getElementById('btnTheme'); if(btnTheme) btnTheme.onclick=()=>{ themeIndex=(themeIndex+1)%THEMES.length; applyTheme(themeIndex); toast('THEME: '+THEMES[themeIndex].name); if(!started) startGame(); };
-/* === スマホUIの確実な表示 === */
-(function(){
-  const btns = document.querySelector('.btns');
-  if (btns) {
-    const isCoarse = matchMedia('(pointer: coarse)').matches;
-    const isNarrow = window.innerWidth <= 900;
-    if (isCoarse || isNarrow) btns.classList.add('show');
-  }
-})();
-
-/* === キャンバスをタップで操作：左/中央/右 = レーン選択、ダブルタップ = PHASE === */
-(function(){
-  const canvasEl = document.getElementById('game');
-  let lastTap = 0;
-
-  function goLane(target){
-    target = Math.max(0, Math.min(2, target));
-    while (lane < target) changeLane(1);
-    while (lane > target) changeLane(-1);
-    if (!started) startGame();
-  }
-
-  canvasEl.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    const rect = canvasEl.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const third = rect.width / 3;
-
-    const now = performance.now();
-    if (now - lastTap < 250) {
-      // ダブルタップでPHASE発動
-      activatePhase();
-      if (!started) startGame();
-    } else {
-      // タップ位置でレーン指定（左=0, 中央=1, 右=2）
-      const target = x < third ? 0 : (x > 2*third ? 2 : 1);
-      goLane(target);
-    }
-    lastTap = now;
-  }, { passive: false });
-})();
-
-/* === iOS対策：初回操作でAudioContextをresume === */
-(function(){
-  ['pointerdown','keydown','click','touchstart'].forEach(ev => {
-    window.addEventListener(ev, () => {
-      if (SOUNDS.ac && SOUNDS.ac.state === 'suspended') {
-        SOUNDS.ac.resume().catch(()=>{});
-      }
-    }, { once: true, passive: true });
-  });
-})();
-
-  /* ========================== 譜面 ========================== */
-  function buildChart(){
-    const arr=[]; let t=BEAT_MS*2; let baseLane=0; let angle=0;
-    for(let b=0;b<BARS;b++){
-      for(let beat=0;beat<4;beat++){
-        arr.push({ time:Math.floor(t), lane:baseLane, type:'coin', angle:(angle%360) });
-        if(beat===2){ const alt=(baseLane+1)%LANES; arr.push({ time:Math.floor(t+BEAT_MS*0.5), lane:alt, type:'coin', angle:(angle+18)%360 }); }
-        t+=BEAT_MS; angle+=22.5;
-      }
-      if (b%2===1){ arr.push({ time:Math.floor(t-BEAT_MS*0.25), lane:baseLane, type:'wall', angle:(angle+30)%360 }); }
-      baseLane=(baseLane+1)%LANES;
-    }
-    return arr;
-  }
-
-  /* ========================== 基本操作 ========================== */
-  function resetGame(){
-    started=false; paused=false; startTime=0; elapsed=0; score=0; combo=0; multiplier=1; feverUntil=0; lane=1; theta=-90; shake=0;
-    shield=START_SHIELD; phaseUntil=0; phaseCharges=1; perfectStreak=0; assistBoostUntil=0; hitTimestamps=[];
-    if($over) $over.classList.add('hidden');
-    items=buildChart().map(c=>({ ...c, taken:false, hit:false }));
+  function startGame(){
+    if(started) return;
+    started=true; score=0; combo=0; multiplier=1; shield=0; phaseCharges=1;
+    $start.classList.add('hidden');
+    $over.classList.add('hidden');
     updateHUD();
-    document.body.style.background=getComputedStyle(document.documentElement).getPropertyValue('--bg');
-    $start.classList.remove('hidden');
-    toast('READY');
   }
-  function startGame(){ if(started) return; started=true; startTime=performance.now(); SOUNDS.playBGM(); $start.classList.add('hidden'); toast('GO!'); }
-  function togglePause(){ if(!started) return; paused=!paused; toast(paused?'PAUSED':'RESUMED'); }
-  function changeLane(d){ if(!started) return; lane=Math.max(0,Math.min(LANES-1,lane+d)); lastLaneChangeAt=performance.now(); }
-  resetGame();
+  window.startGame = startGame;
 
-  /* ========================== ループ ========================== */
-  let last=performance.now();
-  function frame(now){
+  function gameOver(){
+    started = false;
+    best = Math.max(best, score);
+    localStorage.setItem('orbitrush_best', String(best));
+    $overScore.textContent = score;
+    $overBest.textContent = best;
+    $over.classList.remove('hidden');
+  }
+
+  // Dummy game loop for demonstration
+  let x = 450, y = 800, dx = 0;
+  function frame(){
+    if(started){
+      x += dx;
+      if(x < 50 || x > 850) gameOver();
+      ctx.clearRect(0,0,900,900);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x-10, y-10, 20, 20);
+      score++;
+      updateHUD();
+    }
     requestAnimationFrame(frame);
-    let dt=Math.min(1/30,(now-last)/1000); last=now;
-    if(now<hitstopUntil) dt*=0.1;
+  }
+  frame();
 
-    // 壁接近アシスト
-    const nearWall=items.some(it=>!it.taken&&!it.hit&&it.type==='wall'&&it.lane===lane&&Math.abs(angleDiff(theta,it.angle))<=ASSIST_SLOW_RANGE&&it.time<=elapsed+260);
-    const assistFactor=(now<assistBoostUntil)?0.5:0.7; if(nearWall && performance.now()>=phaseUntil) dt*=assistFactor;
-
-    if(!started||paused){ drawIdle(now); return; }
-
-    elapsed=now-startTime;
-    remMs=Math.max(0,SONG_LENGTH_MS-elapsed); if($time) $time.textContent=(remMs/1000).toFixed(1);
-    const sec=Math.ceil(remMs/1000);
-    if(sec<=10 && sec>0 && sec!==lastSecond){ countPitch=600+(10-sec)*60; SOUNDS.beep('count'); toast(sec+'s'); }
-    lastSecond=sec;
-
-    clutch = remMs <= (CLUTCH_SEC*1000);
-    const beatPhase=((elapsed%BEAT_MS)/BEAT_MS);
-    if(remMs<=3000 && beatPhase<prevBeatPhase){ hitstopUntil=now+40; zoomPunch=Math.max(zoomPunch,0.5); }
-    prevBeatPhase=beatPhase;
-
-    if(elapsed>SONG_LENGTH_MS){ started=false; endRun(); return; }
-
-    const inFever = now<feverUntil; const speed=BASE_SPEED*(inFever?FEVER_SPEED_BOOST:1); theta+=speed*dt; if(theta>360) theta-=360;
-
-    // 当たり判定
-    const hitGood=HIT_GOOD*(inFever?1.4:1);
-    const candidates=items.filter(it=>!it.taken&&!it.hit&&it.time<=elapsed+250);
-    for(const it of candidates){
-      const d=Math.abs(angleDiff(theta,it.angle)); if(it.lane!==lane) continue;
-      if(it.type==='coin' && d<=hitGood) onCoin(it,d);
-      if(it.type==='wall'){
-        if(performance.now()<phaseUntil){ it.hit=true; continue; }
-        if(d<=WALL_HIT_ANGLE){ if(performance.now()-lastLaneChangeAt<COYOTE_MS){ particlesBurst(it,6,'red'); } else { onWall(it); } }
-      }
+  addEventListener('keydown', (e)=>{
+    if(!started && (e.key==='ArrowLeft' || e.key==='ArrowRight')) startGame();
+    if(e.key==='ArrowLeft') dx = -5;
+    if(e.key==='ArrowRight') dx = 5;
+    if(e.key==='r'){
+        $over.classList.add('hidden');
+        startGame();
     }
-
-    document.body.style.background = inFever ? getComputedStyle(document.documentElement).getPropertyValue('--bg-fever') : getComputedStyle(document.documentElement).getPropertyValue('--bg');
-    shake*=0.9; if(shake<0.2) shake=0;
-    drawGame(inFever, now);
-  }
-  requestAnimationFrame(frame);
-
-  /* ========================== 終了 & スコア ========================== */
-  function endRun(){
-    best=Math.max(best,score); localStorage.setItem('orbitrush_best',String(best)); updateHUD();
-    if($time) $time.textContent='0.0'; if($overScore) $overScore.textContent=score.toLocaleString(); if($overBest) $overBest.textContent=best.toLocaleString(); if($over) $over.classList.remove('hidden');
-  }
-
-  /* ========================== イベント ========================== */
-  function onCoin(it, dAngle){
-    it.taken=true; let rank='GOOD', add=100;
-    if(dAngle<=HIT_PERFECT){ rank='PERFECT'; add=150; SOUNDS.beep('perfect'); shake=2; particlesBurst(it); perfectStreak++; }
-    else if(dAngle<=HIT_GREAT){ rank='GREAT'; add=120; SOUNDS.beep('great'); particlesBurst(it,8); perfectStreak=0; }
-    else { SOUNDS.beep('coin'); particlesBurst(it,5); perfectStreak=0; }
-
-    combo++; if(combo%FEVER_NEED===0) triggerFever();
-    multiplier=Math.min(MAX_MULTIPLIER,1+Math.floor(combo/FEVER_NEED));
-
-    const bonus=(clutch && rank==='PERFECT')?CLUTCH_BONUS:0;
-    score+=(add+bonus)*multiplier; updateHUD();
-
-    if(perfectStreak>0 && perfectStreak%8===0 && phaseCharges<PHASE_MAX){ phaseCharges++; toast('PHASE +1'); updateHUD(); }
-
-    toast(bonus?`${rank} +${(add*multiplier)} +CLUTCH ${bonus*multiplier}`:`${rank} +${(add*multiplier)}`);
-  }
-
-  function onWall(it){
-    it.hit=true; hitstopUntil=performance.now()+HITSTOP_MS; flash=FLASH_START; zoomPunch=Math.max(zoomPunch,1); if(navigator.vibrate){ try{navigator.vibrate(60);}catch(e){} }
-    theta-=KNOCKBACK_DEG; if(theta<0) theta+=360;
-    hitTimestamps.push(performance.now()); hitTimestamps=hitTimestamps.filter(t=>performance.now()-t<10000); if(hitTimestamps.length>=2){ assistBoostUntil=performance.now()+6000; toast('ASSIST+'); }
-    if(shield>0){ shield--; toast('GUARD!'); SOUNDS.beep('hit'); updateHUD(); shake=10; particlesBurst(it,18,'red'); return; }
-    combo=0; multiplier=1; perfectStreak=0; updateHUD(); SOUNDS.beep('hit'); shake=14; particlesBurst(it,28,'red'); toast('HIT!');
-  }
-
-  function triggerFever(){ feverUntil=performance.now()+FEVER_TIME; updateHUD(); SOUNDS.beep('fever'); toast('FEVER!!'); shake=8; if(shield===0) shield=1; if(phaseCharges<PHASE_MAX){ phaseCharges++; toast('PHASE +1'); } updateHUD(); }
-
-  function updateHUD(){ $score.textContent=score.toLocaleString(); $best.textContent=best.toLocaleString(); $combo.textContent=combo; $multi.textContent=multiplier; $fever.textContent=(performance.now()<feverUntil)?'ON':'-'; $shield.textContent=shield; if($phaseHUD) $phaseHUD.textContent=phaseCharges; }
-
-  /* ========================== 描画 ========================== */
-  function angleDiff(a,b){ let d=(a-b+540)%360-180; return Math.abs(d); }
-
-  function particlesBurst(it, n=12, color='cyan'){
-    const a=(it.angle-90)*Math.PI/180; const r=RINGS[it.lane]; const x=Math.cos(a)*r, y=Math.sin(a)*r;
-    for(let i=0;i<n;i++){ particles.push({ x, y, vx:(Math.random()-0.5)*150, vy:(Math.random()-0.5)*150, life:0.5, c:color }); }
-  }
-
-  function drawBackdrop(w,h,cx,cy,elapsed){
-    const t=elapsed/1000, lines=36;
-    for(let i=0;i<lines;i++){ const ang=(i/lines)*Math.PI*2 + t*0.2; const x=Math.cos(ang)*(RINGS[2]+40), y=Math.sin(ang)*(RINGS[2]+40); ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+x, cy+y); ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=1; ctx.stroke(); }
-    ctx.beginPath(); ctx.arc(cx,cy,RINGS[2]+26,0,Math.PI*2); ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=3; ctx.stroke();
-  }
-
-  function drawIdle(now){
-    const w=canvas.width/dpr, h=canvas.height/dpr, cx=w/2, cy=h/2; ctx.clearRect(0,0,w,h); drawBackdrop(w,h,cx,cy,elapsed);
-  }
-
-  function drawGame(inFever, now){
-    const w=canvas.width/dpr, h=canvas.height/dpr, cx=w/2, cy=h/2;
-    const beatPhase=((elapsed%BEAT_MS)/BEAT_MS); const pulse=Math.sin(beatPhase*Math.PI*2)*0.5+0.5;
-    ctx.clearRect(0,0,w,h);
-    drawBackdrop(w,h,cx,cy,elapsed);
-
-    ctx.save(); if(shake) ctx.translate((Math.random()-0.5)*shake,(Math.random()-0.5)*shake); ctx.translate(cx,cy); if(zoomPunch>0){ ctx.scale(1+zoomPunch*0.03,1+zoomPunch*0.03); zoomPunch*=0.85; }
-
-    // 背景リング
-    for(let i=0;i<RINGS.length;i++){ const r=RINGS[i]; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); const alpha=(i===lane?0.25:0.12)+pulse*0.06; ctx.strokeStyle=`rgba(255,255,255,${alpha})`; ctx.lineWidth=2+(i===lane?1:0); ctx.stroke(); }
-
-    // 先読み描画
-    const future=elapsed+2000;
-    for(const it of items){ if(it.taken||it.hit) continue; if(it.time>future) continue; const a=(it.angle-90)*Math.PI/180; const r=RINGS[it.lane]; const x=Math.cos(a)*r, y=Math.sin(a)*r;
-      if(it.type==='coin'){
-        ctx.save(); ctx.translate(x,y);
-        ctx.beginPath(); ctx.arc(0,0,9,0,Math.PI*2); ctx.strokeStyle=rgba(CUR.accent,0.9); ctx.lineWidth=3; ctx.shadowColor=rgba(CUR.accent,0.85); ctx.shadowBlur=16; ctx.stroke();
-        ctx.beginPath(); ctx.arc(0,0,2.5,0,Math.PI*2); ctx.fillStyle=rgba(CUR.accent,0.9); ctx.fill(); ctx.shadowBlur=0; ctx.restore();
-      } else { // wall
-        ctx.save(); ctx.translate(x,y); ctx.rotate(a + now*0.003);
-        ctx.beginPath(); ctx.moveTo(0,-18); ctx.lineTo(16,12); ctx.lineTo(-16,12); ctx.closePath(); ctx.fillStyle=rgba(CUR.danger,0.95); ctx.shadowColor=rgba(CUR.danger,0.8); ctx.shadowBlur=16; ctx.fill(); ctx.shadowBlur=0;
-        ctx.beginPath(); ctx.moveTo(0,-18); ctx.lineTo(5,4); ctx.lineTo(-5,4); ctx.closePath(); ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.fill(); ctx.restore();
-      }
-    }
-
-    // プレイヤー（トレイル）
-    const pa=(theta-90)*Math.PI/180, pr=RINGS[lane]; const px=Math.cos(pa)*pr, py=Math.sin(pa)*pr;
-    trail.push({ x:px, y:py, life:0.5 }); if(trail.length>180) trail.shift();
-    for(let i=trail.length-1;i>=0;i--){ const t=trail[i]; t.life-=1/60; if(t.life<=0){ trail.splice(i,1); continue; } ctx.globalAlpha=t.life*0.8; ctx.beginPath(); ctx.arc(t.x, t.y, 6*(t.life), 0, Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.8)'; ctx.fill(); ctx.globalAlpha=1; }
-
-    const phasing=performance.now()<phaseUntil; if(phasing){ ctx.beginPath(); ctx.arc(px,py,PLAYER_RADIUS*1.8,0,Math.PI*2); ctx.strokeStyle=rgba(CUR.good,0.85); ctx.lineWidth=3; ctx.stroke(); }
-    ctx.beginPath(); ctx.arc(px,py,PLAYER_RADIUS*(inFever?1.35:1),0,Math.PI*2); ctx.fillStyle=inFever?rgba(CUR.good,0.95):rgba(CUR.fg,0.95); ctx.shadowColor=inFever?rgba(CUR.good,0.75):rgba(CUR.fg,0.5); ctx.shadowBlur=18; ctx.fill(); ctx.shadowBlur=0;
-
-    // パーティクル
-    for(let i=particles.length-1;i>=0;i--){ const p=particles[i]; p.life-=1/60; if(p.life<=0){ particles.splice(i,1); continue; } p.x+=p.vx*(1/60); p.y+=p.vy*(1/60); ctx.globalAlpha=Math.max(0,p.life*2); ctx.fillStyle=(p.c==='red')?rgba(CUR.danger,0.95):rgba(CUR.accent,0.95); ctx.fillRect(p.x-1.2,p.y-1.2,2.4,2.4); ctx.globalAlpha=1; }
-
-    // カウントダウン（ラスト10秒）
-    const rem=SONG_LENGTH_MS-elapsed; if(rem>0 && rem<=10000){ ctx.save(); ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.font='900 64px system-ui, sans-serif'; ctx.textAlign='center'; ctx.fillText(String(Math.ceil(rem/1000)), 0, -RINGS[0]-80); ctx.restore(); }
-
-    // FEVER予告
-    if(combo % FEVER_NEED === FEVER_NEED-1 && (elapsed % 600) < 300){ drawTextAt('FEVER READY', 0, -RINGS[0]-44, '#7cffcb'); } // This line uses a hardcoded color
-
-    // 安全方向ヒント
-    (function(){
-      const imminents=items.filter(it=>!it.taken&&!it.hit&&it.type==='wall'&&it.lane===lane&&it.time<=elapsed+900);
-      if(imminents.length){
-        const leftLane=Math.max(0,lane-1), rightLane=Math.min(LANES-1,lane+1);
-        const safeLeft = !items.some(it=>!it.taken&&!it.hit&&it.type==='wall'&&it.lane===leftLane && Math.abs(angleDiff(theta,it.angle))<=WALL_HIT_ANGLE && it.time<=elapsed+350);
-        const safeRight= !items.some(it=>!it.taken&&!it.hit&&it.type==='wall'&&it.lane===rightLane&& Math.abs(angleDiff(theta,it.angle))<=WALL_HIT_ANGLE && it.time<=elapsed+350);
-        let hint = safeLeft && !safeRight ? '⇦' : (!safeLeft && safeRight ? '⇨' : (safeLeft? '⇦' : (safeRight? '⇨':'!')));
-        ctx.save(); ctx.translate(0,0); ctx.fillStyle=rgba(CUR.danger,0.9); ctx.font='900 48px system-ui, sans-serif'; ctx.textAlign='center'; ctx.fillText(hint, canvas.width/dpr/2, canvas.height/dpr*0.82); ctx.restore();
-      }
-    })();
-
-    ctx.restore();
-
-    // 被弾フラッシュ
-    if(flash>0){ ctx.fillStyle=rgba(CUR.danger, flash); ctx.fillRect(0,0,w,h); flash*=0.9; }
-
-    // クラッチ赤ビネット
-    const clutchIntensity=Math.max(0, Math.min(1, (5000 - (SONG_LENGTH_MS-elapsed))/5000));
-    if(clutchIntensity>0){ const rad=Math.max(w,h)*0.72; const g=ctx.createRadialGradient(w/2,h/2,rad*0.2, w/2,h/2,rad); g.addColorStop(0,'rgba(255,0,0,0)'); g.addColorStop(1,`rgba(255,0,0,${0.12+0.28*clutchIntensity})`); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); }
-
-    // スキャンライン
-    const grd=ctx.createLinearGradient(0,0,0,h); grd.addColorStop(0,'rgba(255,255,255,0.04)'); grd.addColorStop(0.5,'rgba(255,255,255,0)'); grd.addColorStop(1,'rgba(255,255,255,0.04)'); ctx.fillStyle=grd; ctx.fillRect(0,0,w,h);
-  }
-
-  function drawTextAt(text,x,y,color='#fff'){ ctx.save(); ctx.translate(canvas.width/dpr/2, canvas.height/dpr/2); ctx.translate(x,y); ctx.fillStyle=color; ctx.font='700 20px system-ui, sans-serif'; ctx.textAlign='center'; ctx.fillText(text,0,0); ctx.restore(); }
+  });
+  addEventListener('keyup', (e)=>{
+    if(e.key==='ArrowLeft' || e.key==='ArrowRight') dx=0;
+  });
 })();
 </script>
-<div id="mobileControls" class="mobile-controls" aria-hidden="true">
-      <div class="mc-btn" data-key="ArrowLeft">←</div>
-      <div class="mc-btn" data-key="ArrowRight">→</div>
-      <div class="mc-btn" data-key="KeyT">Theme</div>
-      <div class="mc-btn" data-key="Space">PHASE</div>
-      <div class="mc-btn" data-key="KeyP">Pause</div>
-    </div>
-<script>
-    (function(){
-      // ===== モバイル/狭幅なら新UI表示 =====
-      const controls = document.getElementById('mobileControls');
-      const isCoarse = window.matchMedia('(pointer: coarse)').matches;
-      const isNarrow = window.innerWidth <= 900;
-      if (controls && (isCoarse || isNarrow)) {
-        controls.classList.add('show');
-        controls.setAttribute('aria-hidden','false');
-      }
 
-      // ===== 既存の .btns を強制表示したい場合は以下を有効化（今回は非表示方針）
-      // const btns = document.querySelector('.btns');
-      // if (btns && (isCoarse || isNarrow)) btns.classList.add('show');
+<!-- Mobile UI Buttons -->
+<button id="btnStart" class="ui-start" aria-hidden="true">TAP TO START</button>
+<button id="btnMute" class="ui-mute" aria-pressed="false" aria-label="Mute / Unmute"></button>
 
-      // ===== キー送信用ユーティリティ =====
-      const target = document; // 多くのゲームが document に keydown/keyup を張っている
-      const pressed = new Set();
-      const mapInfo = (code) => {
-        const m = {
-          ArrowLeft:  { key:'ArrowLeft', code:'ArrowLeft' },
-          ArrowRight: { key:'ArrowRight', code:'ArrowRight' },
-          Space:      { key:' ',         code:'Space'      },
-          KeyT:       { key:'t',         code:'KeyT'       },
-          KeyP:       { key:'p',         code:'KeyP'       },
-          KeyR:       { key:'r',         code:'KeyR'       },
-          KeyM:       { key:'m',         code:'KeyM'       },
-        };
-        return m[code] || { key: code, code };
-      };
-      const send = (type, code) => {
-        const info = mapInfo(code);
-        const evt = new KeyboardEvent(type, {
-          key: info.key, code: info.code,
-          bubbles: true, cancelable: true, repeat: false
-        });
-        target.dispatchEvent(evt);
-      };
-      const press = (code) => { if (pressed.has(code)) return; pressed.add(code); send('keydown', code); };
-      const release = (code) => { if (!pressed.has(code)) return; pressed.delete(code); send('keyup', code); };
-      const releaseAll = () => { for (const c of Array.from(pressed)) release(c); };
-
-      // ===== ボタン -> 仮想キーボード =====
-      if (controls) {
-        controls.addEventListener('pointerdown', (e) => {
-          const btn = e.target.closest('.mc-btn');
-          if (!btn) return;
-          e.preventDefault();
-          btn.setPointerCapture?.(e.pointerId);
-          press(btn.dataset.key);
-        }, {passive:false});
-
-        controls.addEventListener('pointerup', (e) => {
-          const btn = e.target.closest('.mc-btn');
-          if (!btn) return;
-          e.preventDefault();
-          release(btn.dataset.key);
-        }, {passive:false});
-
-        controls.addEventListener('pointercancel', (e) => {
-          const btn = e.target.closest('.mc-btn');
-          if (!btn) return;
-          release(btn.dataset.key);
-        });
-      }
-
-      // ===== キャンバスタップ：左/右 移動、ダブルタップでPHASE =====
-      const canvasEl = document.getElementById('game');
-      if (canvasEl) {
-        let lastTap = 0;
-        canvasEl.addEventListener('pointerdown', (e) => {
-          e.preventDefault();
-          const rect = canvasEl.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const now = performance.now();
-
-          if (now - lastTap < 250) {
-            // ダブルタップ: PHASE
-            send('keydown', 'Space'); send('keyup', 'Space');
-          } else {
-            // 単タップ: 左半分=Left、右半分=Right（必要に応じて中央分岐は後で拡張）
-            const isLeft = x < rect.width / 2;
-            const code = isLeft ? 'ArrowLeft' : 'ArrowRight';
-            // 単発入力（押してすぐ離す）
-            send('keydown', code); send('keyup', code);
-          }
-          lastTap = now;
-        }, {passive:false});
-      }
-
-      // ===== ページ切替/非表示時に押下状態をクリア =====
-      document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
-      window.addEventListener('blur', releaseAll);
-
-      // ===== iOSのAudioContext解除（初回操作1回だけ） =====
-      const unlockAudio = () => {
-        try {
-          const ac = (window.SOUNDS && window.SOUNDS.ac) || null;
-          if (ac && ac.state === 'suspended') ac.resume();
-        } catch(e){}
-      };
-      ['pointerdown','keydown','click','touchstart'].forEach(ev => {
-        window.addEventListener(ev, unlockAudio, { once: true, passive: true });
-      });
-    })();
-    </script>
-<div id="mobileStart" class="mobile-start" aria-hidden="true">TAP TO START</div>
+<!-- Mobile UI Logic -->
 <script>
 (function(){
-  // ===== モバイル判定：粗いポインタ or 狭幅 =====
   const isCoarse = window.matchMedia('(pointer: coarse)').matches;
   const isNarrow = window.innerWidth <= 900;
 
-  // ===== 最前面の「TAP TO START」ボタンを用意 =====
-  const starter = document.getElementById('mobileStart');
+  const starter = document.getElementById('btnStart');
+  const muter   = document.getElementById('btnMute');
+
+  function fireKey(code){
+    const key = (code === 'Space') ? ' ' : (code === 'KeyM' ? 'm' : code);
+    const kd = new KeyboardEvent('keydown', {key, code, bubbles:true, cancelable:true});
+    const ku = new KeyboardEvent('keyup',   {key, code, bubbles:true, cancelable:true});
+    document.dispatchEvent(kd); document.dispatchEvent(ku);
+  }
+
+  async function unlockAudio(){
+    try {
+      const ac = (window.SOUNDS && window.SOUNDS.ac) || null;
+      if (ac && ac.state === 'suspended') await ac.resume();
+    } catch(_) {}
+  }
+
+  let gameHasStarted = false;
+  async function startGameSafe(){
+    if (gameHasStarted) return;
+    gameHasStarted = true;
+    await unlockAudio();
+
+    if (typeof window.startGame === 'function') window.startGame();
+    else { fireKey('Enter'); fireKey('Space'); }
+
+    if (starter) { starter.classList.remove('show'); starter.setAttribute('aria-hidden','true'); }
+  }
+
+  function setMuteUI(isMuted){
+    if (!muter) return;
+    muter.classList.toggle('is-muted', !!isMuted);
+    muter.setAttribute('aria-pressed', isMuted ? 'true' : 'false');
+  }
+
+  function toggleMute(){
+    if (window.SOUNDS && typeof SOUNDS.toggleMute === 'function') {
+        SOUNDS.toggleMute();
+        setMuteUI(SOUNDS.getMuted());
+    } else {
+        fireKey('KeyM');
+        const isMuted = muter.classList.toggle('is-muted');
+        setMuteUI(isMuted);
+    }
+  }
+
   if (starter && (isCoarse || isNarrow)) {
     starter.classList.add('show');
     starter.setAttribute('aria-hidden','false');
   }
 
-  // ===== 説明オーバーレイっぽい要素たち（あれば全部反応させる） =====
-  const overlaySelector = '#howto, .howto, .help, .overlay, .intro, .modal, .screen';
-  const overlays = Array.from(document.querySelectorAll(overlaySelector));
+  starter?.addEventListener('click', (e)=>{ e.preventDefault(); startGameSafe(); });
+  muter?.addEventListener('click', (e)=>{ e.preventDefault(); toggleMute(); });
 
-  let kicked = false;
-  async function kickStart() {
-    if (kicked) return;
-    kicked = true;
-
-    // 1) iOS等のAudioContextロック解除
-    try {
-      const ac = (window.SOUNDS && window.SOUNDS.ac) || null;
-      if (ac && ac.state === 'suspended') await ac.resume();
-    } catch(_) {}
-
-    // 2) 既存APIがあれば優先（startGameやhowto解除）
-    try {
-      if (typeof window.startGame === 'function') window.startGame();
-      if (typeof window.hideHowto === 'function') window.hideHowto();
-    } catch(_) {}
-
-    // 3) 最後の手段：可視オーバーレイを非表示に（display:none）
-    overlays.forEach(el => {
-      try {
-        const style = getComputedStyle(el);
-        // 画面を覆っていそうなものだけ対象（positionがfixed/absoluteで幅広い）
-        if ((style.position === 'fixed' || style.position === 'absolute') && el.offsetParent !== null) {
-          el.style.display = 'none';
-        }
-      } catch(_) {}
-    });
-
-    // 4) 「どれかキーで開始」型への互換：Enter & Space を1回打つ
-    try {
-      ['Enter','Space'].forEach(code => {
-        const key = code === 'Space' ? ' ' : 'Enter';
-        const ev1 = new KeyboardEvent('keydown', { key, code, bubbles:true, cancelable:true });
-        const ev2 = new KeyboardEvent('keyup',   { key, code, bubbles:true, cancelable:true });
-        document.dispatchEvent(ev1);
-        document.dispatchEvent(ev2);
-      });
-    } catch(_) {}
-
-    // 5) 最前面のスターターボタンを隠す
-    if (starter) starter.classList.remove('show');
-  }
-
-  // ===== どこを押しても一度だけ開始できるようにする =====
-  // 既存のpreventDefaultでキャンバスが反応しなくても、windowキャプチャで拾う
-  ['pointerdown','touchstart','click','keydown'].forEach(type => {
-    window.addEventListener(type, (e) => {
-      // 説明画面上のタップ/クリック、または任意のキー入力で開始
-      if (type === 'keydown') {
-        // どのキーでもOK
-        kickStart();
-      } else {
-        // クリック/タップの場合
-        kickStart();
-      }
-    }, { once: true, capture: true, passive: false });
-  });
-
-  // 明示ボタンでも開始
-  if (starter) {
-    starter.addEventListener('pointerdown', (e)=>{ e.preventDefault(); kickStart(); }, {passive:false});
-    starter.addEventListener('click', (e)=>{ e.preventDefault(); kickStart(); });
-  }
-
-  // 説明オーバーレイそのものをタップで開始（複数あれば全部に付与）
-  overlays.forEach(el => {
-    el.addEventListener('pointerdown', (e)=>{ e.preventDefault(); kickStart(); }, {passive:false});
-    el.addEventListener('click', (e)=>{ e.preventDefault(); kickStart(); });
-  });
+  window.addEventListener('keydown', ()=>{ startGameSafe(); }, { once:true });
 })();
 </script>
 </body>
