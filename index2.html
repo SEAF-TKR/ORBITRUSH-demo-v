@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>ORBIT RUSH — v0.8.1 (Mobile Ready)</title>
+<style>
+  :root {
+    --bg: #0a0c10; --bg-fever:#0d141a; --fg:#eaf6ff; --accent:#41d1ff; --danger:#ff4d6d; --good:#7cffcb;
+  }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; }
+  #wrap { display: grid; place-items: center; height: 100%; }
+  canvas { width: min(92vw, 720px); height: min(92vh, 720px); aspect-ratio: 1 / 1; display: block; background: radial-gradient(120% 120% at 50% 50%, #0e1016 0%, #0a0c10 70%); border-radius: 22px; box-shadow: 0 10px 30px rgba(0,0,0,.35) inset; }
+  .hud { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; font-weight: 700; letter-spacing: .02em; text-shadow: 0 1px 0 rgba(0,0,0,.5); flex-wrap: wrap; justify-content: center; }
+  .badge { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(6px); }
+  .controls { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); opacity: .95; font-size: 14px; text-align: center; }
+  .hidden { display: none; }
+  .start, .over { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.35); backdrop-filter: blur(2px); }
+  .panel { padding: 22px 26px; border-radius: 16px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); text-align: center; }
+  .panel h1 { margin: 0 0 8px; font-size: 22px; letter-spacing: .06em; text-shadow: 0 2px 10px rgba(255,255,255,.2); }
+  .scoreXL { font-size: 56px; font-weight: 900; letter-spacing: .04em; margin: 8px 0 2px; text-shadow: 0 4px 16px rgba(0,0,0,.35); }
+  .subtle { opacity: .85; font-size: 12px; }
+
+  /* Mobile UI Enhancements */
+  @media (pointer: coarse), (max-width: 900px) {
+    .start, .over, .controls {
+      display: none !important;
+    }
+  }
+  .ui-start { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10000; display: none; padding: 14px 18px; width: min(420px, 86vw); text-align: center; font: 700 18px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color: #fff; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.35); border-radius: 16px; backdrop-filter: blur(6px); -webkit-user-select: none; user-select: none; }
+  .ui-start.show { display: block; }
+  .ui-mute { position: fixed; right: max(8px, env(safe-area-inset-right)); top: max(8px, env(safe-area-inset-top)); z-index: 10001; padding: 10px 12px; font: 600 16px/1 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; color: #fff; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.35); border-radius: 12px; backdrop-filter: blur(6px); cursor: pointer; }
+  .ui-mute::before { content: "🔊"; }
+  .ui-mute.is-muted::before { content: "🔇"; }
+  #game { touch-action: none; }
+</style>
+</head>
+<body>
+  <div id="wrap"><canvas id="game" width="900" height="900"></canvas></div>
+  <div class="hud">
+    <div class="badge">SCORE <span id="score">0</span></div>
+    <div class="badge">BEST <span id="best">0</span></div>
+    <div class="badge">COMBO <span id="combo">0</span></div>
+    <div class="badge">MULTI ×<span id="multi">1</span></div>
+    <div class="badge">FEVER <span id="fever">-</span></div>
+    <div class="badge">SHIELD <span id="shield">0</span></div>
+    <div class="badge">PHASE <span id="phase">1</span></div>
+    <div class="badge">TIME <span id="time">30.0</span></div>
+  </div>
+  <div id="start" class="start"><div class="panel"><h1>ORBIT RUSH</h1><p>← / → to Start</p></div></div>
+  <div id="over" class="over hidden"><div class="panel"><h1>GAME OVER</h1><div class="scoreXL" id="overScore">0</div><div class="subtle">BEST <span id="overBest">0</span></div><p>Press R to Restart</p></div></div>
+
+<script>
+// Original Game Logic
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resizeCanvas, { passive: true });
+  resizeCanvas();
+
+  const $ = (id) => document.getElementById(id);
+  const $score=$('score'),$best=$('best'),$combo=$('combo'),$multi=$('multi'),$fever=$('fever'),$shield=$('shield'),$time=$('time'),$overScore=$('overScore'),$overBest=$('overBest'),$phaseHUD=$('phase');
+  const $start=$('start'), $over=$('over');
+
+  let started=false, paused=false, score=0, combo=0, multiplier=1, shield=0, phaseCharges=1;
+  let best=parseInt(localStorage.getItem('orbitrush_best')||'0',10);
+
+  const SOUNDS = (() => {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    let muted = false;
+    function beep(kind='coin'){
+      if(muted || !ac) return;
+      const o=ac.createOscillator(), g=ac.createGain(), t=ac.currentTime;
+      o.connect(g).connect(ac.destination);
+      if(kind==='coin'){o.type='square';o.frequency.setValueAtTime(960,t);}
+      if(kind==='hit'){o.type='sawtooth';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(110,t+0.15);}
+      g.gain.value=0.001; g.gain.exponentialRampToValueAtTime(0.1,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+0.2);
+      o.start(t); o.stop(t+0.21);
+    }
+    function toggleMute() { muted = !muted; }
+    return { ac, beep, toggleMute, getMuted: () => muted };
+  })();
+  window.SOUNDS = SOUNDS;
+
+  function updateHUD(){ $score.textContent=score; $best.textContent=best; $combo.textContent=combo; $multi.textContent=multiplier; $shield.textContent=shield; $phaseHUD.textContent=phaseCharges; }
+
+  function startGame(){
+    if(started) return;
+    started=true; score=0; combo=0; multiplier=1; shield=0; phaseCharges=1;
+    $start.classList.add('hidden');
+    $over.classList.add('hidden');
+    updateHUD();
+  }
+  window.startGame = startGame;
+
+  function gameOver(){
+    started = false;
+    best = Math.max(best, score);
+    localStorage.setItem('orbitrush_best', String(best));
+    $overScore.textContent = score;
+    $overBest.textContent = best;
+    $over.classList.remove('hidden');
+  }
+
+  // Dummy game loop for demonstration
+  let x = 450, y = 800, dx = 0;
+  function frame(){
+    if(started){
+      x += dx;
+      if(x < 50 || x > 850) gameOver();
+      ctx.clearRect(0,0,900,900);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x-10, y-10, 20, 20);
+      score++;
+      updateHUD();
+    }
+    requestAnimationFrame(frame);
+  }
+  frame();
+
+  addEventListener('keydown', (e)=>{
+    if(!started && (e.key==='ArrowLeft' || e.key==='ArrowRight')) startGame();
+    if(e.key==='ArrowLeft') dx = -5;
+    if(e.key==='ArrowRight') dx = 5;
+    if(e.key==='r'){
+        $over.classList.add('hidden');
+        startGame();
+    }
+  });
+  addEventListener('keyup', (e)=>{
+    if(e.key==='ArrowLeft' || e.key==='ArrowRight') dx=0;
+  });
+})();
+</script>
+
+<!-- Mobile UI Buttons -->
+<button id="btnStart" class="ui-start" aria-hidden="true">TAP TO START</button>
+<button id="btnMute" class="ui-mute" aria-pressed="false" aria-label="Mute / Unmute"></button>
+
+<!-- Mobile UI Logic -->
+<script>
+(function(){
+  const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+  const isNarrow = window.innerWidth <= 900;
+
+  const starter = document.getElementById('btnStart');
+  const muter   = document.getElementById('btnMute');
+
+  function fireKey(code){
+    const key = (code === 'Space') ? ' ' : (code === 'KeyM' ? 'm' : code);
+    const kd = new KeyboardEvent('keydown', {key, code, bubbles:true, cancelable:true});
+    const ku = new KeyboardEvent('keyup',   {key, code, bubbles:true, cancelable:true});
+    document.dispatchEvent(kd); document.dispatchEvent(ku);
+  }
+
+  async function unlockAudio(){
+    try {
+      const ac = (window.SOUNDS && window.SOUNDS.ac) || null;
+      if (ac && ac.state === 'suspended') await ac.resume();
+    } catch(_) {}
+  }
+
+  let gameHasStarted = false;
+  async function startGameSafe(){
+    if (gameHasStarted) return;
+    gameHasStarted = true;
+    await unlockAudio();
+
+    if (typeof window.startGame === 'function') window.startGame();
+    else { fireKey('Enter'); fireKey('Space'); }
+
+    if (starter) { starter.classList.remove('show'); starter.setAttribute('aria-hidden','true'); }
+  }
+
+  function setMuteUI(isMuted){
+    if (!muter) return;
+    muter.classList.toggle('is-muted', !!isMuted);
+    muter.setAttribute('aria-pressed', isMuted ? 'true' : 'false');
+  }
+
+  function toggleMute(){
+    if (window.SOUNDS && typeof SOUNDS.toggleMute === 'function') {
+        SOUNDS.toggleMute();
+        setMuteUI(SOUNDS.getMuted());
+    } else {
+        fireKey('KeyM');
+        const isMuted = muter.classList.toggle('is-muted');
+        setMuteUI(isMuted);
+    }
+  }
+
+  if (starter && (isCoarse || isNarrow)) {
+    starter.classList.add('show');
+    starter.setAttribute('aria-hidden','false');
+  }
+
+  starter?.addEventListener('click', (e)=>{ e.preventDefault(); startGameSafe(); });
+  muter?.addEventListener('click', (e)=>{ e.preventDefault(); toggleMute(); });
+
+  window.addEventListener('keydown', ()=>{ startGameSafe(); }, { once:true });
+})();
+</script>
+</body>
+</html>
