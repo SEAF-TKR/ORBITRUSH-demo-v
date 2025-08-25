@@ -79,6 +79,30 @@
         .mc-btn { padding: 1.05rem .6rem; font-size: 17px; }
       }
     </style>
+<style>
+  /* モバイル用の「TAP TO START」最前面ボタン */
+  .mobile-start {
+    position: fixed;
+    inset: auto 0 18vh 0;
+    margin: 0 auto;
+    width: min(420px, 92vw);
+    padding: 1rem 1.25rem;
+    text-align: center;
+    font: 700 18px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    color: #fff;
+    background: rgba(0,0,0,.55);
+    border: 1px solid rgba(255,255,255,.35);
+    border-radius: 16px;
+    z-index: 10000; /* 既存オーバーレイより前面に出す */
+    display: none;  /* JSでモバイル時のみ表示 */
+    backdrop-filter: blur(6px);
+    -webkit-user-select: none; user-select: none;
+  }
+  .mobile-start.show { display: block; }
+
+  /* 説明オーバーレイがクリック可能に見えるように（念のため） */
+  .howto, .help, .overlay, .intro, .modal, .screen { cursor: pointer; }
+</style>
 </head>
 <body>
   <!-- DEMO: badge & discount buy link -->
@@ -642,5 +666,94 @@
       });
     })();
     </script>
+<div id="mobileStart" class="mobile-start" aria-hidden="true">TAP TO START</div>
+<script>
+(function(){
+  // ===== モバイル判定：粗いポインタ or 狭幅 =====
+  const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+  const isNarrow = window.innerWidth <= 900;
+
+  // ===== 最前面の「TAP TO START」ボタンを用意 =====
+  const starter = document.getElementById('mobileStart');
+  if (starter && (isCoarse || isNarrow)) {
+    starter.classList.add('show');
+    starter.setAttribute('aria-hidden','false');
+  }
+
+  // ===== 説明オーバーレイっぽい要素たち（あれば全部反応させる） =====
+  const overlaySelector = '#howto, .howto, .help, .overlay, .intro, .modal, .screen';
+  const overlays = Array.from(document.querySelectorAll(overlaySelector));
+
+  let kicked = false;
+  async function kickStart() {
+    if (kicked) return;
+    kicked = true;
+
+    // 1) iOS等のAudioContextロック解除
+    try {
+      const ac = (window.SOUNDS && window.SOUNDS.ac) || null;
+      if (ac && ac.state === 'suspended') await ac.resume();
+    } catch(_) {}
+
+    // 2) 既存APIがあれば優先（startGameやhowto解除）
+    try {
+      if (typeof window.startGame === 'function') window.startGame();
+      if (typeof window.hideHowto === 'function') window.hideHowto();
+    } catch(_) {}
+
+    // 3) 最後の手段：可視オーバーレイを非表示に（display:none）
+    overlays.forEach(el => {
+      try {
+        const style = getComputedStyle(el);
+        // 画面を覆っていそうなものだけ対象（positionがfixed/absoluteで幅広い）
+        if ((style.position === 'fixed' || style.position === 'absolute') && el.offsetParent !== null) {
+          el.style.display = 'none';
+        }
+      } catch(_) {}
+    });
+
+    // 4) 「どれかキーで開始」型への互換：Enter & Space を1回打つ
+    try {
+      ['Enter','Space'].forEach(code => {
+        const key = code === 'Space' ? ' ' : 'Enter';
+        const ev1 = new KeyboardEvent('keydown', { key, code, bubbles:true, cancelable:true });
+        const ev2 = new KeyboardEvent('keyup',   { key, code, bubbles:true, cancelable:true });
+        document.dispatchEvent(ev1);
+        document.dispatchEvent(ev2);
+      });
+    } catch(_) {}
+
+    // 5) 最前面のスターターボタンを隠す
+    if (starter) starter.classList.remove('show');
+  }
+
+  // ===== どこを押しても一度だけ開始できるようにする =====
+  // 既存のpreventDefaultでキャンバスが反応しなくても、windowキャプチャで拾う
+  ['pointerdown','touchstart','click','keydown'].forEach(type => {
+    window.addEventListener(type, (e) => {
+      // 説明画面上のタップ/クリック、または任意のキー入力で開始
+      if (type === 'keydown') {
+        // どのキーでもOK
+        kickStart();
+      } else {
+        // クリック/タップの場合
+        kickStart();
+      }
+    }, { once: true, capture: true, passive: false });
+  });
+
+  // 明示ボタンでも開始
+  if (starter) {
+    starter.addEventListener('pointerdown', (e)=>{ e.preventDefault(); kickStart(); }, {passive:false});
+    starter.addEventListener('click', (e)=>{ e.preventDefault(); kickStart(); });
+  }
+
+  // 説明オーバーレイそのものをタップで開始（複数あれば全部に付与）
+  overlays.forEach(el => {
+    el.addEventListener('pointerdown', (e)=>{ e.preventDefault(); kickStart(); }, {passive:false});
+    el.addEventListener('click', (e)=>{ e.preventDefault(); kickStart(); });
+  });
+})();
+</script>
 </body>
 </html>
