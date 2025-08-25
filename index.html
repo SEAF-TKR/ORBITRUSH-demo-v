@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 <title>ORBIT RUSH — v0.8.1 (theme-linked + phase + hints)</title>
 <style>
   :root {
@@ -40,6 +40,45 @@
   /* プレイ中の誤スクロールやダブルタップズーム抑止 */
   #game { touch-action: none; }
 </style>
+<style>
+      /* 既存のスマホ用ボタンが表示されない環境対策（任意クラス） */
+      .btns.show { display: flex !important; }
+
+      /* 新しいオンスクリーン操作パッド */
+      .mobile-controls {
+        position: fixed;
+        inset: auto 0 0 0;
+        display: none;            /* JSでモバイル時のみ表示 */
+        gap: .75rem;
+        padding: .75rem;
+        background: rgba(0,0,0,.35);
+        backdrop-filter: blur(6px);
+        z-index: 9999;
+        touch-action: none;       /* スクロール/ダブルタップズーム抑止 */
+      }
+      .mobile-controls.show { display: grid; }
+      .mobile-controls { grid-template-columns: 1fr 1fr 1.2fr 1.8fr 1.2fr; align-items: stretch; }
+      .mc-btn {
+        font: 600 16px/1.1 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+        color: #fff;
+        background: rgba(255,255,255,.12);
+        border: 1px solid rgba(255,255,255,.25);
+        border-radius: 14px;
+        padding: .9rem .6rem;
+        text-align: center;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .mc-btn:active { transform: translateY(1px); }
+      /* 既存キャンバスの誤スクロール防止 */
+      #game { touch-action: none; }
+
+      /* 既存の .btns がある場合、モバイルでは非表示（重複UI回避） */
+      @media (pointer: coarse), (max-width: 900px) {
+        .btns { display: none !important; }
+        .mc-btn { padding: 1.05rem .6rem; font-size: 17px; }
+      }
+    </style>
 </head>
 <body>
   <!-- DEMO: badge & discount buy link -->
@@ -490,5 +529,118 @@
   function drawTextAt(text,x,y,color='#fff'){ ctx.save(); ctx.translate(canvas.width/dpr/2, canvas.height/dpr/2); ctx.translate(x,y); ctx.fillStyle=color; ctx.font='700 20px system-ui, sans-serif'; ctx.textAlign='center'; ctx.fillText(text,0,0); ctx.restore(); }
 })();
 </script>
+<div id="mobileControls" class="mobile-controls" aria-hidden="true">
+      <div class="mc-btn" data-key="ArrowLeft">←</div>
+      <div class="mc-btn" data-key="ArrowRight">→</div>
+      <div class="mc-btn" data-key="KeyT">Theme</div>
+      <div class="mc-btn" data-key="Space">PHASE</div>
+      <div class="mc-btn" data-key="KeyP">Pause</div>
+    </div>
+<script>
+    (function(){
+      // ===== モバイル/狭幅なら新UI表示 =====
+      const controls = document.getElementById('mobileControls');
+      const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+      const isNarrow = window.innerWidth <= 900;
+      if (controls && (isCoarse || isNarrow)) {
+        controls.classList.add('show');
+        controls.setAttribute('aria-hidden','false');
+      }
+
+      // ===== 既存の .btns を強制表示したい場合は以下を有効化（今回は非表示方針）
+      // const btns = document.querySelector('.btns');
+      // if (btns && (isCoarse || isNarrow)) btns.classList.add('show');
+
+      // ===== キー送信用ユーティリティ =====
+      const target = document; // 多くのゲームが document に keydown/keyup を張っている
+      const pressed = new Set();
+      const mapInfo = (code) => {
+        const m = {
+          ArrowLeft:  { key:'ArrowLeft', code:'ArrowLeft' },
+          ArrowRight: { key:'ArrowRight', code:'ArrowRight' },
+          Space:      { key:' ',         code:'Space'      },
+          KeyT:       { key:'t',         code:'KeyT'       },
+          KeyP:       { key:'p',         code:'KeyP'       },
+          KeyR:       { key:'r',         code:'KeyR'       },
+          KeyM:       { key:'m',         code:'KeyM'       },
+        };
+        return m[code] || { key: code, code };
+      };
+      const send = (type, code) => {
+        const info = mapInfo(code);
+        const evt = new KeyboardEvent(type, {
+          key: info.key, code: info.code,
+          bubbles: true, cancelable: true, repeat: false
+        });
+        target.dispatchEvent(evt);
+      };
+      const press = (code) => { if (pressed.has(code)) return; pressed.add(code); send('keydown', code); };
+      const release = (code) => { if (!pressed.has(code)) return; pressed.delete(code); send('keyup', code); };
+      const releaseAll = () => { for (const c of Array.from(pressed)) release(c); };
+
+      // ===== ボタン -> 仮想キーボード =====
+      if (controls) {
+        controls.addEventListener('pointerdown', (e) => {
+          const btn = e.target.closest('.mc-btn');
+          if (!btn) return;
+          e.preventDefault();
+          btn.setPointerCapture?.(e.pointerId);
+          press(btn.dataset.key);
+        }, {passive:false});
+
+        controls.addEventListener('pointerup', (e) => {
+          const btn = e.target.closest('.mc-btn');
+          if (!btn) return;
+          e.preventDefault();
+          release(btn.dataset.key);
+        }, {passive:false});
+
+        controls.addEventListener('pointercancel', (e) => {
+          const btn = e.target.closest('.mc-btn');
+          if (!btn) return;
+          release(btn.dataset.key);
+        });
+      }
+
+      // ===== キャンバスタップ：左/右 移動、ダブルタップでPHASE =====
+      const canvasEl = document.getElementById('game');
+      if (canvasEl) {
+        let lastTap = 0;
+        canvasEl.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          const rect = canvasEl.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const now = performance.now();
+
+          if (now - lastTap < 250) {
+            // ダブルタップ: PHASE
+            send('keydown', 'Space'); send('keyup', 'Space');
+          } else {
+            // 単タップ: 左半分=Left、右半分=Right（必要に応じて中央分岐は後で拡張）
+            const isLeft = x < rect.width / 2;
+            const code = isLeft ? 'ArrowLeft' : 'ArrowRight';
+            // 単発入力（押してすぐ離す）
+            send('keydown', code); send('keyup', code);
+          }
+          lastTap = now;
+        }, {passive:false});
+      }
+
+      // ===== ページ切替/非表示時に押下状態をクリア =====
+      document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
+      window.addEventListener('blur', releaseAll);
+
+      // ===== iOSのAudioContext解除（初回操作1回だけ） =====
+      const unlockAudio = () => {
+        try {
+          const ac = (window.SOUNDS && window.SOUNDS.ac) || null;
+          if (ac && ac.state === 'suspended') ac.resume();
+        } catch(e){}
+      };
+      ['pointerdown','keydown','click','touchstart'].forEach(ev => {
+        window.addEventListener(ev, unlockAudio, { once: true, passive: true });
+      });
+    })();
+    </script>
 </body>
 </html>
